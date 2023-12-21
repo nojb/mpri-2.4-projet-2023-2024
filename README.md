@@ -301,7 +301,7 @@ you prefer).
    You should be able to test your constraint solver by running
    commands such as
 
-       dune exec -- minihell --show-constraint --log-solver tests/id_poly.test
+       dune exec -- minihell --show-constraint --log-solver tests.t/id_poly.test
 
    At this point you have a complete type-checker for the simply-typed
    lambda-calculus. Congratulations!
