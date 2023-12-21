@@ -269,6 +269,106 @@ the inference variables.
     (f : β -> γ -> α).
       lambda (p : {β * γ}). let ((x : β), (y : γ)) = p in f x y
   
+  $ minihell $FLAGS prod_annot.test
+  Input term:
+    lambda x. (x : {a * b * c * d})
+  
+  Generated constraint:
+    ∃?final_type.
+      (∃?x ?wt (?warr = ?x -> ?wt).
+        ?final_type = ?warr
+        ∧ decode ?x
+        ∧ (∃(?a = a) (?b = b) (?c = c) (?d = d) (?wprod = {?a * ?b * ?c * ?d}).
+          ?wprod = ?x ∧ ?wprod = ?wt))
+      ∧ decode ?final_type
+  
+  Inferred type:
+    {a * b * c * d} -> {a * b * c * d}
+  
+  Elaborated term:
+    lambda (x : {a * b * c * d}). x
+  
+  $ minihell $FLAGS annot_arrow.test
+  Input term:
+    lambda f. lambda x. (f : a -> a -> c) x x
+  
+  Generated constraint:
+    ∃?final_type.
+      (∃?f ?wt (?warr = ?f -> ?wt).
+        ?final_type = ?warr
+        ∧ decode ?f
+        ∧ (∃?x ?wt/1 (?warr/1 = ?x -> ?wt/1).
+          ?wt = ?warr/1
+          ∧ decode ?x
+          ∧ (∃?wu (?wt/2 = ?wu -> ?wt/1).
+            (∃?wu/1 (?wt/3 = ?wu/1 -> ?wt/2).
+              (∃ (?a = a) (?a/1 = a) (?c = c) (?warr/2 = ?a/1 -> ?c)
+                (?warr/3 = ?a -> ?warr/2)
+              . ?warr/3 = ?f ∧ ?warr/3 = ?wt/3)
+              ∧ ?wu/1 = ?x)
+            ∧ ?wu = ?x)))
+      ∧ decode ?final_type
+  
+  Inferred type:
+    (a -> a -> c) -> a -> c
+  
+  Elaborated term:
+    lambda (f : a -> a -> c). lambda (x : a). f x x
+  
+
+  $ minihell $FLAGS let_prod.test
+  Input term:
+    lambda
+    x1.
+      lambda
+      x2. lambda x3. lambda x4. let (a, b, c, d) = (x1, x2, x3, x4) in c
+  
+  Generated constraint:
+    ∃?final_type.
+      (∃?x1 ?wt (?warr = ?x1 -> ?wt).
+        ?final_type = ?warr
+        ∧ decode ?x1
+        ∧ (∃?x2 ?wt/1 (?warr/1 = ?x2 -> ?wt/1).
+          ?wt = ?warr/1
+          ∧ decode ?x2
+          ∧ (∃?x3 ?wt/2 (?warr/2 = ?x3 -> ?wt/2).
+            ?wt/1 = ?warr/2
+            ∧ decode ?x3
+            ∧ (∃?x4 ?wt/3 (?warr/3 = ?x4 -> ?wt/3).
+              ?wt/2 = ?warr/3
+              ∧ decode ?x4
+              ∧ (∃?a ?b ?c ?d (?wt/4 = {?a * ?b * ?c * ?d}).
+                decode ?a
+                ∧ decode ?b
+                ∧ decode ?c
+                ∧ decode ?d
+                ∧ (∃?w1.
+                  ?w1 = ?x1
+                  ∧ (∃?w2.
+                    ?w2 = ?x2
+                    ∧ (∃?w3.
+                      ?w3 = ?x3
+                      ∧ (∃?w4.
+                        ?w4 = ?x4
+                        ∧ (∃(?wprod = {?w1 * ?w2 * ?w3 * ?w4}). ?wt/4 = ?wprod)))))
+                ∧ ?wt/3 = ?c)))))
+      ∧ decode ?final_type
+  
+  Inferred type:
+    δ -> γ -> α -> β -> α
+  
+  Elaborated term:
+    lambda
+    (x1 : δ).
+      lambda
+      (x2 : γ).
+        lambda
+        (x3 : α).
+          lambda
+          (x4 : β).
+            let ((a : δ), (b : γ), (c : α), (d : β)) = (x1, x2, x3, x4) in c
+  
+
 ## Cyclic types
 
 Unification can sometimes create cyclic types. We decide to reject

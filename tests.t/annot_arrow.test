@@ -1,0 +1,1 @@
+lambda f x. (f : (a -> a -> c)) x x
