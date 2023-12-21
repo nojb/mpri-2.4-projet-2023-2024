@@ -120,3 +120,18 @@ end
 module _ = (Empty : Functor)
 
 let not_yet fname = fun _ -> failwith (fname ^ ": not implemented yet")
+
+let map2 f l1 l2 =
+  let exception Exit in
+  let rec loop l1 l2 =
+    match l1, l2 with
+    | [], [] -> []
+    | x1 :: l1, x2 :: l2 ->
+      let c = f x1 x2 in
+      let l = loop l1 l2 in
+      c :: l
+    | _ -> raise Exit
+  in
+  match loop l1 l2 with
+  | l -> Some l
+  | exception Exit -> None
