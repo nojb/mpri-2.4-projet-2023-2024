@@ -55,8 +55,14 @@ module Make(T : Utils.Functor) = struct
       bind ty1 @@ fun w1 ->
       bind ty2 @@ fun w2 ->
       exists "warr" ~eq:(Arrow (w1, w2)) k
-    | Prod _ ->
-      Utils.not_yet "Infer.bind: Prod case" (ty, k)
+    | Prod tys ->
+      let rec loop ws = function
+        | [] ->
+          exists "wprod" ~eq:(Prod (List.rev ws)) k
+        | ty :: tys ->
+          bind ty (fun w -> loop (w :: ws) tys)
+      in
+      loop [] tys
 
   (** This function generates a typing constraint from an untyped term:
       [has_type env t w] generates a constraint [C] which contains [w] as
@@ -100,9 +106,75 @@ module Make(T : Utils.Functor) = struct
       and+ () = eq wt w in
       c
     | Untyped.Tuple ts ->
-      Utils.not_yet "Infer.has_type: Tuple case" (env, ts, fun () -> has_type)
+      let rec loop i wl = function
+        | [] ->
+          exists "wprod" ~eq:(Prod (List.rev wl)) @@ fun wprod ->
+          let+ () = eq w wprod in
+          []
+        | t :: ts ->
+          exists (Printf.sprintf "w%d" i) @@ fun wt ->
+          let+ t = has_type env t wt
+          and+ ts = loop (i+1) (wt :: wl) ts in
+          t :: ts
+      in
+      let+ ts = loop 1 [] ts in
+      STLC.Tuple ts
     | Untyped.LetTuple (xs, t, u) ->
-      Utils.not_yet "Infer.has_type: LetTuple case" (env, xs, t, u, fun () -> has_type)
+      let rec loop env ws = function
+        | x :: xs ->
+          exists (Untyped.Var.name x) @@ fun w ->
+          loop (Env.add x w env) (w :: ws) xs
+        | [] ->
+          let ws = List.rev ws in
+          exists "wt" ~eq:(Prod ws) @@ fun wt ->
+          let rec loop = function
+            | w :: ws ->
+              let+ ty = decode w
+              and+ tys, t, u = loop ws in
+              ty :: tys, t, u
+            | [] ->
+              let+ t = has_type env t wt
+              and+ u = has_type env u w in
+              [], t, u
+          in
+          loop ws
+      in
+      let+ tys, t, u = loop env [] xs in
+      STLC.LetTuple (List.map2 (fun x ty -> x, ty) xs tys, t, u)
+
+(*
+
+Alternatively, one could use the simpler approach below (with only one loop
+instead of two). The only difference is that the function above produces a
+constraint of the form
+
+  (ex x (ex y (ex z ... (conj (decode x) (conj (decode y) (conj (decode z) ...))))))
+
+while the function below generates an equivalent constraint of the form
+
+  (ex x (conj (ex y (conj (ex z (conj ...)) (decode z)) (decode y)) (decode x)))
+
+My first attempt was to use the function below (which also seems nicely dual to
+the Tuple case), but in order to match the output in run.t I switched to the one
+above (for which the printer also produces "flatter" output).
+
+   let rec loop env ws = function
+     | x :: xs ->
+       exists (Untyped.Var.name x) @@ fun w ->
+       let+ tys, t, u = loop (Env.add x w env) (w :: ws) xs
+       and+ ty = decode w in
+       ty :: tys, t, u
+     | [] ->
+       exists "wt" ~eq:(Prod (List.rev ws)) @@ fun wt ->
+       let+ t = has_type env t wt
+       and+ u = has_type env u w in
+       [], t, u
+   in
+   let+ tys, t, u = loop env [] xs in
+   STLC.LetTuple (List.map2 (fun x ty -> x, ty) xs tys, t, u)
+
+*)
+
     | Do p ->
       (* Feel free to postone this until you start looking
          at random generation. Getting type inference to
