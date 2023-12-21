@@ -1,25 +1,25 @@
-type 'a t = MSeq_not_implemented_yet
+type 'a t = 'a Seq.t
 
 let map (f : 'a -> 'b) (s : 'a t) : 'b t =
-  Utils.not_yet "MSeq.map" (f, s)
+  Seq.map f s
 
 let return (x : 'a) : 'a t =
-  Utils.not_yet "MSeq.return" x
+  Seq.cons x Seq.empty
 
 let bind (sa : 'a t) (f : 'a -> 'b t) : 'b t =
-  Utils.not_yet "MSeq.bind" (sa, f)
+  Seq.concat_map f sa
 
 let delay (f : unit -> 'a t) : 'a t =
-  Utils.not_yet "MSeq.delay" (f ())
+  fun () -> f () ()
 
 let sum (li : 'a t list) : 'a t =
-  Utils.not_yet "MSeq.sum" li
+  Seq.concat (List.to_seq li)
 
 let fail : 'a t =
-  MSeq_not_implemented_yet
+  Seq.empty
 
 let one_of (vs : 'a array) : 'a t =
-  Utils.not_yet "MSeq.one_of" vs
+  Array.to_seq vs
 
 let run (s : 'a t) : 'a Seq.t =
-  Utils.not_yet "MSeq.run" s
+  s
